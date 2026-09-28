@@ -1,0 +1,32 @@
+services:
+  github-backup:
+    image: ghcr.io/josegonzalez/python-github-backup:latest
+    container_name: github-backup
+    restart: unless-stopped
+
+    environment:
+      GH_ACCOUNT: ${GH_ACCOUNT}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-21600}
+      FULL_INTERVAL: ${FULL_INTERVAL:-604800}
+      TZ: ${TZ:-UTC}
+
+    volumes:
+      - ${BACKUP_HOST_PATH}:/data
+      - ./backup-loop.sh:/backup-loop.sh:ro
+
+    secrets:
+      - github_token
+
+    entrypoint:
+      - /bin/sh
+      - /backup-loop.sh
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+
+secrets:
+  github_token:
+    file: ./secrets/github_token
