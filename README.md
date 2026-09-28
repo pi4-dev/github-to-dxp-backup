@@ -98,6 +98,32 @@ Follow logs:
 docker compose logs -f github-backup
 ```
 
+## Optional success keepalive
+
+An optional HTTP GET notification can be sent after a backup finishes successfully.
+
+Configure it in `.env`:
+
+```dotenv
+KEEPALIVE_URL=https://example.invalid/your-monitoring-endpoint
+KEEPALIVE_TIMEOUT=10
+```
+
+Leave `KEEPALIVE_URL` empty to disable the feature.
+
+The URL is called only after:
+
+1. `github-backup` exits successfully;
+2. the local success marker is updated;
+3. any previous failure marker is removed;
+4. the full-backup marker is updated when applicable.
+
+If the backup fails, the keepalive URL is **not called**.
+
+If the backup succeeds but the keepalive endpoint itself fails or times out, the backup remains successful and the notification failure is logged as a warning. The URL itself is not written to the log.
+
+This makes the option suitable for success-ping services such as self-hosted monitoring endpoints or health-check systems.
+
 ## Default schedule
 
 ```text
