@@ -122,7 +122,7 @@ These files can be monitored externally.
 Run:
 
 ```bash
-BACKUP_ROOT=/path/to/backup/storage ./verify-backups.sh
+BACKUP_ROOT=/path/to/backup/storage sh ./verify-backups.sh
 ```
 
 This runs `git fsck --full` against every repository mirror found in the backup.
