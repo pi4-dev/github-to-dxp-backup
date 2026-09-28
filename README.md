@@ -70,6 +70,7 @@ cp .env.example .env
 Edit `.env` and provide:
 
 - the GitHub user or organization
+- whether the target is an organization (`GH_ORGANIZATION=true`)
 - an absolute NAS path for backup data
 - optional timezone and scheduling intervals
 
