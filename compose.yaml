@@ -11,11 +11,15 @@ services:
       FULL_INTERVAL: ${FULL_INTERVAL:-604800}
       KEEPALIVE_URL: ${KEEPALIVE_URL:-}
       KEEPALIVE_TIMEOUT: ${KEEPALIVE_TIMEOUT:-10}
+      VERIFY_INTERVAL: ${VERIFY_INTERVAL:-604800}
+      VERIFY_KEEPALIVE_URL: ${VERIFY_KEEPALIVE_URL:-}
+      VERIFY_KEEPALIVE_TIMEOUT: ${VERIFY_KEEPALIVE_TIMEOUT:-10}
       TZ: ${TZ:-UTC}
 
     volumes:
       - ${BACKUP_HOST_PATH:?BACKUP_HOST_PATH must be set}:/data
       - ./backup-loop.sh:/backup-loop.sh:ro
+      - ./verify-backups.sh:/verify-backups.sh:ro
 
     secrets:
       - github_token
