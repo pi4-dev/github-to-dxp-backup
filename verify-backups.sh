@@ -17,7 +17,9 @@ for repo in "$BACKUP_ROOT"/repositories/*/repository; do
     echo
     echo "=== $repo ==="
 
-    if git -c safe.directory="$repo"         --git-dir="$repo"         fsck --full
+    if git -c safe.directory="$repo" \
+        --git-dir="$repo" \
+        fsck --full
     then
         echo "PASS"
     else
