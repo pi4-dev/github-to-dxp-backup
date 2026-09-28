@@ -6,6 +6,7 @@ services:
 
     environment:
       GH_ACCOUNT: ${GH_ACCOUNT:?GH_ACCOUNT must be set}
+      GH_ORGANIZATION: ${GH_ORGANIZATION:-false}
       BACKUP_INTERVAL: ${BACKUP_INTERVAL:-21600}
       FULL_INTERVAL: ${FULL_INTERVAL:-604800}
       TZ: ${TZ:-UTC}
