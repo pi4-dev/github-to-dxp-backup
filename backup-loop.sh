@@ -3,6 +3,7 @@
 set -eu
 
 GH_ACCOUNT="${GH_ACCOUNT:?GH_ACCOUNT must be set}"
+GH_ORGANIZATION="${GH_ORGANIZATION:-false}"
 BACKUP_INTERVAL="${BACKUP_INTERVAL:-21600}"
 FULL_INTERVAL="${FULL_INTERVAL:-604800}"
 
@@ -19,9 +20,14 @@ LAST_FAILURE="${STATUS_DIR}/last-failure"
 run_backup() {
     mode="$1"
     incremental=""
+    organization=""
 
     if [ "$mode" = "incremental" ]; then
         incremental="--incremental"
+    fi
+
+    if [ "$GH_ORGANIZATION" = "true" ]; then
+        organization="--organization"
     fi
 
     echo "[$(date -Iseconds)] starting $mode backup for $GH_ACCOUNT"
@@ -30,6 +36,7 @@ run_backup() {
         "$GH_ACCOUNT" \
         --token-fine "file://$TOKEN_FILE" \
         --output-directory "$BACKUP_DIR" \
+        $organization \
         $incremental \
         --private \
         --fork \
