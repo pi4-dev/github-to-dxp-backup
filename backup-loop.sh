@@ -8,23 +8,33 @@ BACKUP_INTERVAL="${BACKUP_INTERVAL:-21600}"
 FULL_INTERVAL="${FULL_INTERVAL:-604800}"
 KEEPALIVE_URL="${KEEPALIVE_URL:-}"
 KEEPALIVE_TIMEOUT="${KEEPALIVE_TIMEOUT:-10}"
+VERIFY_INTERVAL="${VERIFY_INTERVAL:-604800}"
+VERIFY_KEEPALIVE_URL="${VERIFY_KEEPALIVE_URL:-}"
+VERIFY_KEEPALIVE_TIMEOUT="${VERIFY_KEEPALIVE_TIMEOUT:-10}"
 
 BACKUP_DIR="/data"
 STATUS_DIR="${BACKUP_DIR}/status"
 TOKEN_FILE="/run/secrets/github_token"
+VERIFIER_SCRIPT="/verify-backups.sh"
 
 mkdir -p "${STATUS_DIR}"
 
 LAST_FULL="${STATUS_DIR}/last-full"
 LAST_SUCCESS="${STATUS_DIR}/last-success"
 LAST_FAILURE="${STATUS_DIR}/last-failure"
+LAST_VERIFY_SUCCESS="${STATUS_DIR}/last-verify-success"
+LAST_VERIFY_FAILURE="${STATUS_DIR}/last-verify-failure"
 
 send_keepalive() {
-    if [ -z "$KEEPALIVE_URL" ]; then
+    url="$1"
+    timeout="$2"
+    label="$3"
+
+    if [ -z "$url" ]; then
         return 0
     fi
 
-    echo "[$(date -Iseconds)] sending keepalive notification"
+    echo "[$(date -Iseconds)] sending $label keepalive notification"
 
     if python -c '
 import sys
@@ -37,11 +47,47 @@ with urllib.request.urlopen(url, timeout=timeout) as response:
     status = getattr(response, "status", 200)
 
 raise SystemExit(0 if 200 <= status < 400 else 1)
-' "$KEEPALIVE_URL" "$KEEPALIVE_TIMEOUT"
+' "$url" "$timeout"
     then
-        echo "[$(date -Iseconds)] keepalive notification succeeded"
+        echo "[$(date -Iseconds)] $label keepalive notification succeeded"
     else
-        echo "[$(date -Iseconds)] WARNING: keepalive notification failed" >&2
+        echo "[$(date -Iseconds)] WARNING: $label keepalive notification failed" >&2
+    fi
+}
+
+verification_due() {
+    if [ ! -f "$LAST_VERIFY_SUCCESS" ]; then
+        return 0
+    fi
+
+    now="$(date +%s)"
+    last_verify="$(stat -c %Y "$LAST_VERIFY_SUCCESS" 2>/dev/null || echo 0)"
+    age=$((now - last_verify))
+
+    [ "$age" -ge "$VERIFY_INTERVAL" ]
+}
+
+run_verification_if_due() {
+    if ! verification_due; then
+        return 0
+    fi
+
+    echo "[$(date -Iseconds)] starting backup verification"
+
+    if BACKUP_ROOT="$BACKUP_DIR" sh "$VERIFIER_SCRIPT"; then
+        touch "$LAST_VERIFY_SUCCESS"
+        rm -f "$LAST_VERIFY_FAILURE"
+
+        echo "[$(date -Iseconds)] backup verification completed successfully"
+
+        send_keepalive \
+            "$VERIFY_KEEPALIVE_URL" \
+            "$VERIFY_KEEPALIVE_TIMEOUT" \
+            "verification"
+    else
+        touch "$LAST_VERIFY_FAILURE"
+        echo "[$(date -Iseconds)] ERROR: backup verification failed" >&2
+        echo "[$(date -Iseconds)] verification keepalive will not be sent" >&2
     fi
 }
 
@@ -98,9 +144,12 @@ run_backup() {
 
         echo "[$(date -Iseconds)] backup completed successfully"
 
-        # Notify external monitoring only after the backup and local
-        # status updates have completed successfully.
-        send_keepalive
+        send_keepalive \
+            "$KEEPALIVE_URL" \
+            "$KEEPALIVE_TIMEOUT" \
+            "backup"
+
+        run_verification_if_due
 
         return 0
     fi
