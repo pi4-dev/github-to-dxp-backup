@@ -5,13 +5,13 @@ services:
     restart: unless-stopped
 
     environment:
-      GH_ACCOUNT: ${GH_ACCOUNT}
+      GH_ACCOUNT: ${GH_ACCOUNT:?GH_ACCOUNT must be set}
       BACKUP_INTERVAL: ${BACKUP_INTERVAL:-21600}
       FULL_INTERVAL: ${FULL_INTERVAL:-604800}
       TZ: ${TZ:-UTC}
 
     volumes:
-      - ${BACKUP_HOST_PATH}:/data
+      - ${BACKUP_HOST_PATH:?BACKUP_HOST_PATH must be set}:/data
       - ./backup-loop.sh:/backup-loop.sh:ro
 
     secrets:
@@ -26,6 +26,8 @@ services:
 
     cap_drop:
       - ALL
+
+    stop_grace_period: 2m
 
 secrets:
   github_token:
