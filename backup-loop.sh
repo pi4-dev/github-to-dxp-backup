@@ -18,7 +18,6 @@ LAST_FAILURE="${STATUS_DIR}/last-failure"
 
 run_backup() {
     mode="$1"
-
     incremental=""
 
     if [ "$mode" = "incremental" ]; then
@@ -27,7 +26,33 @@ run_backup() {
 
     echo "[$(date -Iseconds)] starting $mode backup for $GH_ACCOUNT"
 
-    if github-backup         "$GH_ACCOUNT"         --token-fine "file://$TOKEN_FILE"         --output-directory "$BACKUP_DIR"         $incremental         --private         --fork         --repositories         --bare         --lfs         --wikis         --issues         --issue-comments         --issue-events         --issue-timeline         --pulls         --pull-comments         --pull-reviews         --pull-commits         --pull-details         --labels         --milestones         --discussions         --releases         --assets         --attachments         --retries 5
+    if github-backup \
+        "$GH_ACCOUNT" \
+        --token-fine "file://$TOKEN_FILE" \
+        --output-directory "$BACKUP_DIR" \
+        $incremental \
+        --private \
+        --fork \
+        --repositories \
+        --bare \
+        --lfs \
+        --wikis \
+        --issues \
+        --issue-comments \
+        --issue-events \
+        --issue-timeline \
+        --pulls \
+        --pull-comments \
+        --pull-reviews \
+        --pull-commits \
+        --pull-details \
+        --labels \
+        --milestones \
+        --discussions \
+        --releases \
+        --assets \
+        --attachments \
+        --retries 5
     then
         touch "$LAST_SUCCESS"
         rm -f "$LAST_FAILURE"
