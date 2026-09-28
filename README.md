@@ -139,21 +139,84 @@ The wrapper records:
 status/last-full
 status/last-success
 status/last-failure
+status/last-verify-success
+status/last-verify-failure
 ```
 
 These files can be monitored externally.
 
-## Verification
+## Automated verification
 
-Run:
+Verification is automatically executed after a successful backup when `VERIFY_INTERVAL` has elapsed.
+
+Default:
+
+```dotenv
+VERIFY_INTERVAL=604800
+```
+
+This means a full verification runs once every 7 days. Set:
+
+```dotenv
+VERIFY_INTERVAL=0
+```
+
+to verify after every successful backup.
+
+The verifier checks:
+
+1. every Git mirror with `git fsck --full`;
+2. every exported `.json` metadata file by parsing it;
+3. every stored Git LFS object by recalculating its SHA-256 hash and comparing it with the LFS object ID.
+
+If any repository, JSON document or LFS object fails verification, the verification run fails.
+
+A failed verification does **not** turn a successfully completed backup job into a failed backup. Instead:
+
+- `status/last-verify-failure` is updated;
+- `status/last-verify-success` is not updated;
+- the verification keepalive is not sent;
+- verification is retried after the next successful backup.
+
+### Verification keepalive
+
+Verification has its own independent success URL:
+
+```dotenv
+VERIFY_KEEPALIVE_URL=https://example.invalid/verification-monitor
+VERIFY_KEEPALIVE_TIMEOUT=10
+```
+
+Leave `VERIFY_KEEPALIVE_URL` empty to disable it.
+
+The verification URL is called **only if all verification checks pass**.
+
+This is intentionally independent from `KEEPALIVE_URL`:
+
+```text
+KEEPALIVE_URL
+    = backup command completed successfully
+
+VERIFY_KEEPALIVE_URL
+    = stored backup passed integrity verification
+```
+
+Therefore an external monitoring system can distinguish between:
+
+- "a new backup was created successfully", and
+- "the stored backup has also been independently verified".
+
+The verification keepalive URL itself is not printed to the logs.
+
+### Manual verification
+
+Verification can also be started manually:
 
 ```bash
 BACKUP_ROOT=/path/to/backup/storage sh ./verify-backups.sh
 ```
 
-This runs `git fsck --full` against every repository mirror found in the backup.
-
-A stronger restore test is documented in [docs/RESTORE-TEST.md](docs/RESTORE-TEST.md).
+A stronger reconstruction test is documented in [docs/RESTORE-TEST.md](docs/RESTORE-TEST.md).
 
 ## Snapshots
 
