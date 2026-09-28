@@ -6,6 +6,8 @@ GH_ACCOUNT="${GH_ACCOUNT:?GH_ACCOUNT must be set}"
 GH_ORGANIZATION="${GH_ORGANIZATION:-false}"
 BACKUP_INTERVAL="${BACKUP_INTERVAL:-21600}"
 FULL_INTERVAL="${FULL_INTERVAL:-604800}"
+KEEPALIVE_URL="${KEEPALIVE_URL:-}"
+KEEPALIVE_TIMEOUT="${KEEPALIVE_TIMEOUT:-10}"
 
 BACKUP_DIR="/data"
 STATUS_DIR="${BACKUP_DIR}/status"
@@ -16,6 +18,32 @@ mkdir -p "${STATUS_DIR}"
 LAST_FULL="${STATUS_DIR}/last-full"
 LAST_SUCCESS="${STATUS_DIR}/last-success"
 LAST_FAILURE="${STATUS_DIR}/last-failure"
+
+send_keepalive() {
+    if [ -z "$KEEPALIVE_URL" ]; then
+        return 0
+    fi
+
+    echo "[$(date -Iseconds)] sending keepalive notification"
+
+    if python -c '
+import sys
+import urllib.request
+
+url = sys.argv[1]
+timeout = float(sys.argv[2])
+
+with urllib.request.urlopen(url, timeout=timeout) as response:
+    status = getattr(response, "status", 200)
+
+raise SystemExit(0 if 200 <= status < 400 else 1)
+' "$KEEPALIVE_URL" "$KEEPALIVE_TIMEOUT"
+    then
+        echo "[$(date -Iseconds)] keepalive notification succeeded"
+    else
+        echo "[$(date -Iseconds)] WARNING: keepalive notification failed" >&2
+    fi
+}
 
 run_backup() {
     mode="$1"
@@ -69,6 +97,11 @@ run_backup() {
         fi
 
         echo "[$(date -Iseconds)] backup completed successfully"
+
+        # Notify external monitoring only after the backup and local
+        # status updates have completed successfully.
+        send_keepalive
+
         return 0
     fi
 
